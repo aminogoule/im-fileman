@@ -65,13 +65,13 @@ void Panel::draw(Terminal& term, bool focused) const {
                 oss << "\033[0m";
 
             line = oss.str().substr(0, innerWidth);
-            //if ((int)line.size() < innerWidth)
-            //    line += std::string(innerWidth - line.size(), ' ');
-    	    std::cout<<line<<"║";
+            if ((int)line.size() < innerWidth)
+                line += std::string(innerWidth - line.size(), ' ');
+    	    //std::cout<<line<<"║";
         }
         
-        //std::cout << line;
-        //std::cout << "║";
+        std::cout << line;
+        std::cout << " ";
     }
 
     // Нижняя рамка
