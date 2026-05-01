@@ -1,0 +1,53 @@
+#include "terminal.h"
+#include "fs.h"
+#include <iostream>
+
+int main() {
+    Terminal term;
+    int selected = 0;
+
+    while (true) {
+        auto cwd = getCurrentDirectory();
+        auto entries = listDirectory(cwd);
+        int rows = term.getWindowRows();
+
+        term.clearScreen();
+        term.moveCursor(1, 1);
+        std::cout << "Current directory: " << cwd << "\n";
+
+        for (int i = 0; i < (int)entries.size() && i < rows - 2; ++i) {
+            if (i == selected) {
+                std::cout << "\033[7m";  // Reverse video
+            }
+            std::cout << (entries[i].isDir ? "[D] " : "    ") << entries[i].name;
+            std::cout << "\033[0m\n";
+        }
+
+        term.flush();
+
+        std::string key = term.readKey();
+
+        if (key == "\033[A") {  // Up
+            if (selected > 0) selected--;
+        } else if (key == "\033[B") {  // Down
+            if (selected < (int)entries.size() - 1) selected++;
+        } else if (key == "\n" || key == "\r") {  // Enter or return 
+            if (entries[selected].isDir) {
+   		 std::string newPath = cwd + "/" + entries[selected].name;
+
+		  if (access(newPath.c_str(), X_OK) != 0) {
+        		std::cerr << "Permission denied: " << newPath << " (" << strerror(errno) << ")\n";
+    		  } else if (!changeDirectory(newPath)) {
+        		std::cerr << "chdir failed: " << strerror(errno) << "\n";
+    		  } else {
+        		selected = 0;
+    			 }
+	}
+        } else if (key == "q") {  // Quit
+            break;
+        }
+    }
+
+    return 0;
+}
+
