@@ -19,65 +19,6 @@ void Panel::load(const std::string& path) {
     selected_ = 0;
 }
 
-void Panel::draw(Terminal& term, bool focused) const {
-    int innerWidth = width_-2;
-    std::string title = " " + path_ + " ";
-    
-    // Обрезаем заголовок, если он слишком длинный
-    if ((int)title.size() > innerWidth)
-        title = title.substr(0, innerWidth);
-
-    int titleStart = (innerWidth - title.size()) / 2;
-
-    // Верхняя рамка с заголовком
-    term.moveCursor(y_, x_);
-    std::cout << "╔";
-    for (int i = 0; i < innerWidth;i++) {
-        if (i == titleStart)
-            std::cout << title;
-        if (i < titleStart || i >= titleStart + (int)title.size())
-            std::cout << "═";
-    }
-    std::cout << "╗";
-
-    // Содержимое
-    for (int i = 0; i < height_ - 2; ++i) {
-        term.moveCursor(y_ + 1 + i, x_);
-        std::cout << "║";
-
-        std::string line(innerWidth, ' '); //bottom line fill
-
-        if (i < (int)entries_.size()) {
-            const auto& entry = entries_[i];
-            std::ostringstream oss;
-
-            if (i == selected_ && focused)
-                oss << "\033[7m";  // обратное видео
-
-            oss << " "; //pre line fill
-            if (entry.isDir)
-                oss << "[D]";
-            else
-                oss << "  ";
-            oss << entry.name;
-
-            if (i == selected_ && focused)
-                oss << "\033[0m";
-
-            line = oss.str().substr(0, innerWidth);
-            if ((int)line.size() < innerWidth)
-                line += std::string(innerWidth - line.size(), ' ');
-    	    //std::cout<<line<<"║";
-        }
-        
-        std::cout << line;
-        std::cout << " ";
-    }
-
-    // Нижняя рамка
-    term.moveCursor(y_ + height_ - 1, x_);
-    std::cout << "╚" << std::string(innerWidth, '=') << "╝";
-}
 void Panel::moveSelection(int delta) {
     int newSel = selected_ + delta;
     if (newSel >= 0 && newSel < (int)entries_.size()) {
@@ -96,6 +37,79 @@ bool Panel::enter() {
         }
     }
     return false;
+}
+
+// render main panels
+void Panel::draw(Terminal& term, bool focused) const {
+    const int innerWidth = width_ - 2;
+
+    // ---- Header ---
+    std::string title = " " + path_ + " ";
+    if ((int)title.size() > innerWidth)
+        title.resize(innerWidth);
+
+    const int titleStart = (innerWidth - title.size()) / 2;
+
+    term.moveCursor(y_, x_);
+    std::cout << "╔";
+
+    for (int i = 0; i < innerWidth;) {
+        if (i == titleStart) {
+            std::cout << title;
+            i += title.size();
+        } else {
+            std::cout << "═";
+            ++i;
+        }
+    }
+
+    std::cout << "╗";
+
+    // ---- Main Content ---
+    for (int i = 0; i < height_ - 2; ++i) {
+        term.moveCursor(y_ + 1 + i, x_);
+        std::cout << "║";
+
+        std::string line;
+        line.reserve(innerWidth);
+
+        if (i < (int)entries_.size()) {
+            const auto& entry = entries_[i];
+
+            line += ' ';
+            line += (entry.isDir ? "[D]" : "  ");
+            line += entry.name;
+        }
+
+        // Обрезка / выравнивание (ТОЛЬКО по видимым символам)
+        if ((int)line.size() > innerWidth) {
+            line.resize(innerWidth);
+        } else {
+            line.append(innerWidth - line.size(), ' ');
+        }
+
+        const bool isSelected = (i == selected_ && focused);
+
+        // ANSI применяется ТОЛЬКО при выводе
+        if (isSelected)
+            std::cout << "\033[7m";
+
+        std::cout << line;
+
+        if (isSelected)
+            std::cout << "\033[0m";
+
+        std::cout << "║";
+    }
+
+    // ---- Нижняя рамка ----
+    term.moveCursor(y_ + height_ - 1, x_);
+    std::cout << "╚";
+
+    for (int i = 0; i < innerWidth; ++i)
+        std::cout << "═";
+
+    std::cout << "╝";
 }
 
 std::string Panel::getCurrentPath() const {
